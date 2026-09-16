@@ -106,7 +106,7 @@ function restoreCompactionItem(item, secret) {
   return {
     type: "message",
     role: "assistant",
-    content: [{ type: "input_text", text: `[Compacted prior context]\n${summary}` }],
+    content: [{ type: "output_text", text: `[Compacted prior context]\n${summary}` }],
   };
 }
 

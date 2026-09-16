@@ -184,6 +184,7 @@ test("adapts Codex remote compaction v2 to a DeepSeek summary and restores it on
   await replayResponse.text();
   assert.equal(observed[1].input.some((item) => item.type === "compaction"), false);
   const restored = observed[1].input.find((item) => item.role === "assistant");
+  assert.equal(restored.content[0].type, "output_text");
   assert.match(restored.content[0].text, /Compacted prior context/);
   assert.match(restored.content[0].text, /tests and a restart are still pending/);
 });
@@ -310,6 +311,7 @@ test("compacts oversized DeepSeek history before a GPT switch exceeds its contex
   assert.equal(observedChatGpt.input.some((item) => item.type === "compaction"), false);
   assert.equal(observedChatGpt.input[0].type, "message");
   assert.equal(observedChatGpt.input[0].role, "assistant");
+  assert.equal(observedChatGpt.input[0].content[0].type, "output_text");
   assert.match(observedChatGpt.input[0].content[0].text, /oversized DeepSeek task/);
 });
 
