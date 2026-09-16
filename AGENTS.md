@@ -42,8 +42,9 @@ The non-negotiable details:
    switch like live ones, and a `staleEffort` marker so a model-only config write never leaks the
    other provider's effort into a new session. The wrapper must forward all other app-server
    JSONL RPC unchanged to the stock Codex binary. When a task switches from DeepSeek back to GPT,
-   the HTTP router must remove only plaintext DeepSeek `reasoning` items that lack OpenAI
-   `encrypted_content`; preserve messages, tool history, and genuine encrypted OpenAI reasoning.
+   the HTTP router must remove only `reasoning` items with nonempty `content`, even when
+   `encrypted_content` is present (DeepSeek sets that field too); preserve messages, tool history,
+   and genuine encrypted OpenAI reasoning with empty content.
    Re-serialized compressed requests must not retain their original `content-encoding` header.
 8. DeepSeek V4.1 accepts images natively, so the router forwards `input_image` parts in
    DeepSeek-bound bodies (message content and `view_image` `function_call_output` results) to

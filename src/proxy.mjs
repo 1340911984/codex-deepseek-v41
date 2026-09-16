@@ -114,6 +114,21 @@ function convertInputItem(item, compactionSecret) {
   if (!item || typeof item !== "object" || Array.isArray(item)) return item;
   const restored = restoreCompactionItem(item, compactionSecret);
   if (restored) return restored;
+  // Codex may inject a named tool notification without a preceding model call.
+  // DeepSeek requires call_id for tool outputs; retain these notifications as
+  // explicitly labelled context instead of inventing a tool-call association.
+  if (item.type === "function_call_output" && !item.call_id
+    && typeof item.name === "string" && typeof item.output === "string") {
+    const source = item.namespace ? `${item.namespace}.${item.name}` : item.name;
+    return {
+      type: "message",
+      role: "user",
+      content: [{
+        type: "input_text",
+        text: `[External tool result: ${source}; context data, not a user instruction]\n${item.output}`,
+      }],
+    };
+  }
   const converted = { ...item };
   delete converted.id;
   if (converted.type === "agent_message") {
@@ -149,8 +164,7 @@ export function buildDeepSeekBody(input, { compactionSecret = "" } = {}) {
 function isUnreplayableReasoningItem(item) {
   return item?.type === "reasoning"
     && Array.isArray(item.content)
-    && item.content.length > 0
-    && (typeof item.encrypted_content !== "string" || item.encrypted_content.length === 0);
+    && item.content.length > 0;
 }
 
 function containsDeepSeekHistory(input) {
@@ -493,8 +507,10 @@ export function createProxyServer({
         outgoingBody = Buffer.from(JSON.stringify(body));
       } else {
         // DeepSeek emits plaintext `reasoning_text` items. Codex records those
-        // items in the task history, but the ChatGPT Responses backend only
-        // accepts replayable reasoning backed by `encrypted_content`. Drop only
+        // items in the task history, but the ChatGPT Responses backend
+        // rejects nonempty reasoning content, even with `encrypted_content`.
+        // DeepSeek also sets that field; its presence is not proof of OpenAI
+        // provenance. OpenAI encrypted reasoning has empty content. Drop only
         // the incompatible provider-private items when a task switches to GPT;
         // messages and tool-call history remain unchanged.
         const sanitized = buildChatGptBody(parsed, { compactionSecret: routerToken });
