@@ -1,0 +1,20 @@
+This repository is a fork of DSCodex / codex-deepseek-router:
+
+    https://github.com/skychentian/codex-deepseek-router
+
+    MIT License
+    Copyright (c) 2026 fish2lab
+
+The upstream license text is kept unchanged in LICENSE. This fork modifies the
+router for DeepSeek V4.1 Flash: the target model identifiers, the removal of the
+GPT-backed image description step, credential separation on the DeepSeek route,
+reasoning-effort pass-through, the catalog template preference, and a
+cross-platform fix to the generated Windows PowerShell path.
+
+"DeepSeek" is a trademark of DeepSeek; "ChatGPT", "Codex" and "OpenAI" are
+trademarks of OpenAI. This project is not affiliated with or endorsed by either
+company. It only wires the locally installed Codex client to the DeepSeek API
+using credentials the user supplies.
+
+Files under `assets/` are the upstream project's artwork, carried over
+unmodified for attribution.

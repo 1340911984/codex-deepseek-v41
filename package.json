@@ -1,0 +1,22 @@
+{
+  "name": "dscodex",
+  "version": "0.7.0",
+  "private": true,
+  "type": "module",
+  "description": "Codex + DeepSeek V4.1 Flash coexistence router: native model picker entry with GPT OAuth models kept intact",
+  "bin": {
+    "dscodex": "./src/cli.mjs"
+  },
+  "scripts": {
+    "test": "node --test",
+    "smoke:picker": "node ./scripts/picker-smoke.mjs",
+    "smoke:state": "node ./scripts/state-smoke.mjs",
+    "start": "node ./src/cli.mjs start",
+    "serve": "node ./src/cli.mjs serve",
+    "doctor": "node ./src/cli.mjs doctor"
+  },
+  "engines": {
+    "node": ">=24.5"
+  },
+  "license": "MIT"
+}

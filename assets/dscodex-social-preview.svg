@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 125 1500 750">
+  <rect y="125" width="1500" height="750" fill="#F6F8FA"/>
+
+  <!-- Central 1500×750 crop of the 1500×1000 banner, scaled uniformly to 1280×640. -->
+  <image href="dscodex.png" x="62" y="165" width="670" height="670" preserveAspectRatio="xMidYMid meet"/>
+
+  <path d="M780 128V872" stroke="#D0D7DE" stroke-width="2"/>
+
+  <image href="codex-icon.png" x="872" y="218" width="104" height="104" preserveAspectRatio="xMidYMid meet"/>
+  <text x="1008" y="286" fill="#8C959F" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="40" font-weight="400">+</text>
+  <image href="deepseek-icon.png" x="1065" y="218" width="104" height="104" preserveAspectRatio="xMidYMid meet"/>
+
+  <text x="872" y="470" fill="#24292F" font-family="Georgia, Times New Roman, Songti SC, serif" font-size="100" font-weight="400" letter-spacing="-3">DSCodex</text>
+  <text x="878" y="558" fill="#24292F" font-family="Georgia, Times New Roman, Songti SC, serif" font-size="37" font-weight="400">DeepSeek V4 Flash for Codex</text>
+
+  <text x="878" y="646" fill="#57606A" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="27" font-weight="400">Native picker · Responses API · Full tool loops</text>
+  <text x="878" y="690" fill="#57606A" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="27" font-weight="400">OpenAI traffic passes through unchanged.</text>
+</svg>
