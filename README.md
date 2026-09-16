@@ -3,6 +3,14 @@
 在不修改 Codex 客户端的前提下，把 **DeepSeek V4.1 Flash** 加进 Codex 桌面端 / CLI / IDE 的原生模型菜单，
 同时保留 OpenAI（Astra、Sol 等）订阅模型继续走 OAuth 登录。
 
+## 原作者与出处
+
+整套接入思路、loopback 分流架构和绝大部分实现都来自原始项目
+[skychentian/codex-deepseek-router](https://github.com/skychentian/codex-deepseek-router)，
+由原作者 [@skychentian](https://github.com/skychentian)（仓库内版权署名 `fish2lab`，即最初的 V4 版本作者）
+设计和实现。本仓库只是在他的成果上适配 DeepSeek V4.1，**所有功劳归原作者**；如果这套方案对你有用，
+请先去给上游点 star。
+
 ## 它解决什么问题
 
 Codex 的所有请求只认一个全局 `openai_base_url`。按 DeepSeek 官方接入文档把提供方整体切过去之后，
@@ -17,8 +25,9 @@ GPT 模型就不可用了，原来的会话也会因为分属不同登录方式�
 
 ## 相比原项目的改动
 
-本仓库是 [skychentian/codex-deepseek-router](https://github.com/skychentian/codex-deepseek-router) 的 fork，
-针对 DeepSeek V4.1 做了以下调整：
+本仓库是原作者 [@skychentian](https://github.com/skychentian) 的
+[codex-deepseek-router](https://github.com/skychentian/codex-deepseek-router) 的 fork，
+针对 DeepSeek V4.1 只做了以下调整：
 
 1. **目标模型换成 V4.1 Flash**：目录条目 `deepseek/deepseek-flash`，上游 wire model `deepseek-flash`。
 2. **删掉 GPT 代看图的旧路径**：V4.1 原生支持图片，图片直接发给 DeepSeek，不再借用你的 OAuth 调第二个厂商。
