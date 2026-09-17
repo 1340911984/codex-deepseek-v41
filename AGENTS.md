@@ -86,3 +86,15 @@ The non-negotiable details:
     router token; on later DeepSeek requests, decrypt only DSCodex-prefixed compaction items and
     restore them as assistant summary context. Never route compaction through GPT or store the
     summary as plaintext in the rollout file.
+13. DeepSeek's `/responses` parser accepts exactly four message content-part variants —
+    `input_text`, `output_text`, `input_image`, `input_file` — and rejects the whole request
+    otherwise (`Failed to deserialize the JSON body into the target type: input: unknown variant
+    ...`), so a DeepSeek-bound body must never carry another provider's part types. Normalise every
+    message content array on that route: keep the four readable variants, relocate a
+    `reasoning_text` part into a preceding `reasoning` item (the only place DeepSeek reads thinking
+    text, and what keeps the thinking-mode round trip alive), drop parts it cannot read — an OpenAI
+    `encrypted_content` blob or an unknown variant — instead of forwarding them, and drop a message
+    whose parts were all unreadable rather than replaying invented text. Symmetrically, a
+    `reasoning` item must pass through the DeepSeek route untouched: its `reasoning_text` is what
+    satisfies "the `reasoning_text` in the thinking mode must be passed back to the API", and only
+    the GPT route removes reasoning items.

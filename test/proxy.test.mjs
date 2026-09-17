@@ -101,6 +101,94 @@ test("routes DeepSeek V4.1 Flash to native DeepSeek /responses and preserves SSE
   });
 });
 
+test("normalises DeepSeek-bound message parts and keeps reasoning_text replayable", async (t) => {
+  let observed;
+  const upstream = http.createServer(async (request, response) => {
+    observed = JSON.parse(await bodyOf(request));
+    response.writeHead(200, { "content-type": "text/event-stream", "content-length": 4 });
+    response.end("data");
+  });
+  const upstreamUrl = await listen(upstream);
+  const proxy = createProxyServer({
+    deepSeekKey: "test-key",
+    deepSeekBaseUrl: upstreamUrl,
+    chatGptBaseUrl: upstreamUrl,
+    logger: { info() {}, error() {} },
+    routerToken: ROUTER_TOKEN,
+  });
+  const proxyUrl = await listen(proxy);
+  t.after(async () => { await close(proxy); await close(upstream); });
+
+  const response = await fetch(route(proxyUrl), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      model: "deepseek/deepseek-flash",
+      stream: true,
+      input: [
+        // DeepSeek rejects this outright: `encrypted_content` is not one of its
+        // four message content variants, and nothing readable survives.
+        { id: "m_opaque", type: "message", role: "user", content: [{ type: "encrypted_content", encrypted_content: "opaque-blob" }] },
+        // A message that carries reasoning plus a real answer.
+        {
+          id: "m_assistant",
+          type: "message",
+          role: "assistant",
+          content: [
+            { type: "reasoning_text", text: "内部推理" },
+            { type: "output_text", text: "answer" },
+            { type: "summary_text", text: "drop me" },
+          ],
+        },
+        // A genuine reasoning item must survive byte-for-byte so thinking mode replays.
+        {
+          id: "rs_1",
+          type: "reasoning",
+          summary: [],
+          content: [{ type: "reasoning_text", text: "kept reasoning" }],
+          encrypted_content: "6acb1ba4-578a-4e11-9a4a-000000000000",
+        },
+        { id: "m_user", type: "message", role: "user", content: [{ type: "input_text", text: "next question" }] },
+      ],
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  const allowed = new Set(["input_text", "output_text", "input_image", "input_file"]);
+  for (const item of observed.input) {
+    // DeepSeek reads reasoning_text only on a reasoning item; message parts must
+    // stay inside its four accepted variants.
+    if (item.type !== "message" || !Array.isArray(item.content)) continue;
+    for (const part of item.content) {
+      assert.ok(allowed.has(part.type), `${item.type} kept an unreadable part: ${part.type}`);
+    }
+  }
+
+  // The unreadable message is dropped rather than replayed with invented text.
+  assert.equal(observed.input.some((item) => item.type === "message" && !item.content.length), false);
+  assert.deepEqual(observed.input[0], {
+    type: "reasoning",
+    content: [{ type: "reasoning_text", text: "内部推理" }],
+  });
+  assert.deepEqual(observed.input[1], {
+    type: "message",
+    role: "assistant",
+    content: [{ type: "output_text", text: "answer" }],
+  });
+  assert.deepEqual(observed.input[2], {
+    type: "reasoning",
+    summary: [],
+    content: [{ type: "reasoning_text", text: "kept reasoning" }],
+    encrypted_content: "6acb1ba4-578a-4e11-9a4a-000000000000",
+  });
+  assert.deepEqual(observed.input[3], {
+    type: "message",
+    role: "user",
+    content: [{ type: "input_text", text: "next question" }],
+  });
+  assert.equal(observed.input.length, 4);
+});
+
 test("adapts Codex remote compaction v2 to a DeepSeek summary and restores it on replay", async (t) => {
   const observed = [];
   const summary = "The user approved the router fix; tests and a restart are still pending.";

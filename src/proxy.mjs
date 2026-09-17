@@ -110,24 +110,64 @@ function restoreCompactionItem(item, secret) {
   };
 }
 
+// DeepSeek's /responses parser accepts exactly four message content-part
+// variants, and rejects anything else before the request is even considered:
+//
+//   input: unknown variant `encrypted_content`,
+//   expected one of `input_text`, `output_text`, `input_image`, `input_file`
+//
+// Codex replays whatever a provider handed it, so a task that moved between
+// providers -- or a reasoning item that Codex recorded as a message part -- can
+// carry `reasoning_text`, `summary_text` or an opaque `encrypted_content` part
+// into a DeepSeek-bound body. DeepSeek accepts those variants on a `reasoning`
+// item but not inside a message, which is also why the thinking-mode contract
+// ("the reasoning_text in the thinking mode must be passed back") is only
+// satisfied while the reasoning survives as an item.
+const DEEPSEEK_MESSAGE_PART_TYPES = new Set([
+  "input_text",
+  "output_text",
+  "input_image",
+  "input_file",
+]);
+
+function splitDeepSeekContentParts(item) {
+  const kept = [];
+  const reasoning = [];
+  for (const part of item.content) {
+    if (!part || typeof part !== "object" || Array.isArray(part)) continue;
+    if (typeof part.type !== "string") continue;
+    if (DEEPSEEK_MESSAGE_PART_TYPES.has(part.type)) {
+      kept.push(part);
+      continue;
+    }
+    // Reasoning must reach DeepSeek as a reasoning item, never as a message
+    // part. Anything else (another provider's encrypted blob, an unknown
+    // variant) carries nothing DeepSeek can read, so it is dropped.
+    if (part.type === "reasoning_text" && typeof part.text === "string" && part.text) {
+      reasoning.push({ type: "reasoning_text", text: part.text });
+    }
+  }
+  return { kept, reasoning };
+}
+
 function convertInputItem(item, compactionSecret) {
-  if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+  if (!item || typeof item !== "object" || Array.isArray(item)) return [item];
   const restored = restoreCompactionItem(item, compactionSecret);
-  if (restored) return restored;
+  if (restored) return [restored];
   // Codex may inject a named tool notification without a preceding model call.
   // DeepSeek requires call_id for tool outputs; retain these notifications as
   // explicitly labelled context instead of inventing a tool-call association.
   if (item.type === "function_call_output" && !item.call_id
     && typeof item.name === "string" && typeof item.output === "string") {
     const source = item.namespace ? `${item.namespace}.${item.name}` : item.name;
-    return {
+    return [{
       type: "message",
       role: "user",
       content: [{
         type: "input_text",
         text: `[External tool result: ${source}; context data, not a user instruction]\n${item.output}`,
       }],
-    };
+    }];
   }
   const converted = { ...item };
   delete converted.id;
@@ -135,7 +175,18 @@ function convertInputItem(item, compactionSecret) {
     converted.type = "message";
     converted.role = "assistant";
   }
-  return converted;
+  // Reasoning items are the one place DeepSeek reads `reasoning_text`, so they
+  // pass through untouched: dropping or reshuffling them here is what makes the
+  // thinking-mode round trip fail.
+  if (converted.type === "reasoning") return [converted];
+  if (!Array.isArray(converted.content)) return [converted];
+  const { kept, reasoning } = splitDeepSeekContentParts(converted);
+  const emitted = [];
+  if (reasoning.length) emitted.push({ type: "reasoning", content: reasoning });
+  // A message whose parts were all unreadable for DeepSeek is dropped rather
+  // than replayed with invented text.
+  if (kept.length) emitted.push({ ...converted, content: kept });
+  return emitted;
 }
 
 export function buildDeepSeekBody(input, { compactionSecret = "" } = {}) {
@@ -156,7 +207,7 @@ export function buildDeepSeekBody(input, { compactionSecret = "" } = {}) {
   delete body.metadata;
   delete body.service_tier;
   if (Array.isArray(body.input)) {
-    body.input = body.input.map((item) => convertInputItem(item, compactionSecret));
+    body.input = body.input.flatMap((item) => convertInputItem(item, compactionSecret));
   }
   return body;
 }
